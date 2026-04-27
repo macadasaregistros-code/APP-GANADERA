@@ -2,8 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleDollarSign, Plus, ReceiptText, TrendingUp } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { FloatingCreateButton, FormPanel } from "@/components/app/form-panel";
 import { FormField } from "@/components/operations/form-field";
 import { MetricCard } from "@/components/operations/metric-card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +18,7 @@ import { formatDate, formatMoney } from "@/features/pastures/format";
 import { usePastureStore } from "@/features/pastures/store";
 
 export function SalesModule() {
+  const [formOpen, setFormOpen] = useState(false);
   const selectedFarmId = usePastureStore((state) => state.selectedFarmId);
   const animals = usePastureStore((state) => state.animals);
   const lots = usePastureStore((state) => state.lots);
@@ -56,6 +59,7 @@ export function SalesModule() {
       extraCosts: 0,
       notes: ""
     });
+    setFormOpen(false);
   });
 
   const totalNetProfit = farmSaleItems.reduce((sum, item) => sum + item.netProfit, 0);
@@ -74,11 +78,7 @@ export function SalesModule() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Registrar venta</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <FormPanel title="Registrar venta" icon={ReceiptText} open={formOpen} onClose={() => setFormOpen(false)}>
             <form className="grid gap-3" onSubmit={onSubmit}>
               <FormField label="Animal" error={form.formState.errors.animalIdsText?.message}>
                 <Select {...form.register("animalIdsText")}>
@@ -113,8 +113,7 @@ export function SalesModule() {
                 Cerrar venta
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </FormPanel>
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -146,6 +145,7 @@ export function SalesModule() {
           </Card>
         ))}
       </section>
+      <FloatingCreateButton label="Registrar venta" onClick={() => setFormOpen(true)} />
     </div>
   );
 }

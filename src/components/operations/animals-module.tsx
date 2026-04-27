@@ -2,8 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Beef, Plus, TrendingDown, TrendingUp } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { FloatingCreateButton, FormPanel } from "@/components/app/form-panel";
 import { FormField } from "@/components/operations/form-field";
 import { MetricCard } from "@/components/operations/metric-card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +24,7 @@ import { formatMoney } from "@/features/pastures/format";
 import { usePastureStore } from "@/features/pastures/store";
 
 export function AnimalsModule() {
+  const [formOpen, setFormOpen] = useState(false);
   const selectedFarmId = usePastureStore((state) => state.selectedFarmId);
   const lots = usePastureStore((state) => state.lots);
   const animals = usePastureStore((state) => state.animals);
@@ -79,6 +82,7 @@ export function AnimalsModule() {
       bodyConditionScore: 3,
       healthObservations: ""
     });
+    setFormOpen(false);
   });
 
   const ready = farmAnimals.filter((animal) => animal.status === "ready_for_sale").length;
@@ -97,11 +101,7 @@ export function AnimalsModule() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Ingresar animal</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <FormPanel title="Ingresar animal" icon={Beef} open={formOpen} onClose={() => setFormOpen(false)}>
             <form className="grid gap-3" onSubmit={onSubmit}>
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Lote" error={form.formState.errors.lotId?.message}>
@@ -166,8 +166,7 @@ export function AnimalsModule() {
                 {form.formState.isSubmitting ? "Guardando..." : "Guardar animal"}
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </FormPanel>
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -203,6 +202,7 @@ export function AnimalsModule() {
           );
         })}
       </section>
+      <FloatingCreateButton label="Ingresar animal" onClick={() => setFormOpen(true)} />
     </div>
   );
 }

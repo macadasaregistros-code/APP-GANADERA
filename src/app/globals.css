@@ -47,3 +47,9 @@ textarea {
 .safe-bottom {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
+
+@media (max-width: 520px) {
+  form .grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}

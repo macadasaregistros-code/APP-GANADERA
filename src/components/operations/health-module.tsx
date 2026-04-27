@@ -2,8 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, HeartPulse, Plus, ShieldCheck } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { FloatingCreateButton, FormPanel } from "@/components/app/form-panel";
 import { FormField } from "@/components/operations/form-field";
 import { MetricCard } from "@/components/operations/metric-card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,7 @@ import { formatDate, formatMoney } from "@/features/pastures/format";
 import { usePastureStore } from "@/features/pastures/store";
 
 export function HealthModule() {
+  const [formOpen, setFormOpen] = useState(false);
   const selectedFarmId = usePastureStore((state) => state.selectedFarmId);
   const lots = usePastureStore((state) => state.lots);
   const animals = usePastureStore((state) => state.animals);
@@ -62,6 +65,7 @@ export function HealthModule() {
       cost: 0,
       notes: ""
     });
+    setFormOpen(false);
   });
 
   return (
@@ -77,11 +81,7 @@ export function HealthModule() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Registrar sanidad</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <FormPanel title="Registrar sanidad" icon={HeartPulse} open={formOpen} onClose={() => setFormOpen(false)}>
             <form className="grid gap-3" onSubmit={onSubmit}>
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Tipo" error={form.formState.errors.eventType?.message}>
@@ -149,8 +149,7 @@ export function HealthModule() {
                 Guardar evento
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </FormPanel>
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -175,6 +174,7 @@ export function HealthModule() {
           );
         })}
       </section>
+      <FloatingCreateButton label="Registrar sanidad" onClick={() => setFormOpen(true)} />
     </div>
   );
 }

@@ -1,7 +1,9 @@
 "use client";
 
-import { LogOut, MapPin } from "lucide-react";
+import { LogOut, MapPin, Plus } from "lucide-react";
+import { useState } from "react";
 
+import { CreateFarmDialog } from "@/components/app/create-farm-dialog";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { usePastureStore } from "@/features/pastures/store";
@@ -11,6 +13,7 @@ export function FarmSwitcher() {
   const farms = usePastureStore((state) => state.farms);
   const selectedFarmId = usePastureStore((state) => state.selectedFarmId);
   const setSelectedFarmId = usePastureStore((state) => state.setSelectedFarmId);
+  const [createFarmOpen, setCreateFarmOpen] = useState(false);
 
   return (
     <div className="flex min-w-0 items-center gap-2">
@@ -36,6 +39,15 @@ export function FarmSwitcher() {
       </label>
       <Button
         type="button"
+        variant="outline"
+        size="icon"
+        title="Crear finca"
+        onClick={() => setCreateFarmOpen(true)}
+      >
+        <Plus className="h-4 w-4" aria-hidden="true" />
+      </Button>
+      <Button
+        type="button"
         variant="ghost"
         size="icon"
         title="Cerrar sesion"
@@ -47,6 +59,7 @@ export function FarmSwitcher() {
       >
         <LogOut className="h-4 w-4" aria-hidden="true" />
       </Button>
+      <CreateFarmDialog open={createFarmOpen} onOpenChange={setCreateFarmOpen} />
     </div>
   );
 }

@@ -2,8 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleDollarSign, Plus, WalletCards } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { FloatingCreateButton, FormPanel } from "@/components/app/form-panel";
 import { FormField } from "@/components/operations/form-field";
 import { MetricCard } from "@/components/operations/metric-card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,7 @@ import { formatDate, formatMoney } from "@/features/pastures/format";
 import { usePastureStore } from "@/features/pastures/store";
 
 export function CostsModule() {
+  const [formOpen, setFormOpen] = useState(false);
   const selectedFarmId = usePastureStore((state) => state.selectedFarmId);
   const lots = usePastureStore((state) => state.lots);
   const animals = usePastureStore((state) => state.animals);
@@ -66,6 +69,7 @@ export function CostsModule() {
       allocationMethod: "finca",
       notes: ""
     });
+    setFormOpen(false);
   });
 
   return (
@@ -80,11 +84,7 @@ export function CostsModule() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Registrar costo</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <FormPanel title="Registrar costo" icon={WalletCards} open={formOpen} onClose={() => setFormOpen(false)}>
             <form className="grid gap-3" onSubmit={onSubmit}>
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Fecha" error={form.formState.errors.costDate?.message}>
@@ -142,8 +142,7 @@ export function CostsModule() {
                 Guardar costo
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </FormPanel>
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -162,6 +161,7 @@ export function CostsModule() {
             </Card>
           ))}
       </section>
+      <FloatingCreateButton label="Registrar costo" onClick={() => setFormOpen(true)} />
     </div>
   );
 }

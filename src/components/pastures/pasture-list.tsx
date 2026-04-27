@@ -3,10 +3,10 @@
 import { AlertTriangle, CalendarPlus, CheckCircle2, Clock, LogIn, LogOut, Plus, Sprout } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { FloatingCreateButton, FormPanel } from "@/components/app/form-panel";
 import { PastureCard } from "@/components/pastures/pasture-card";
 import { PastureEntryForm, PastureEventForm, PastureExitForm, PastureForm } from "@/components/pastures/pasture-forms";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { getPastureStatus } from "@/features/pastures/calculations";
 import { usePastureStore } from "@/features/pastures/store";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ const actionButtons = [
 
 export function PastureList() {
   const [actionPanel, setActionPanel] = useState<ActionPanel>("entry");
+  const [formOpen, setFormOpen] = useState(false);
   const selectedFarmId = usePastureStore((state) => state.selectedFarmId);
   const farms = usePastureStore((state) => state.farms);
   const pastures = usePastureStore((state) => state.pastures);
@@ -62,8 +63,8 @@ export function PastureList() {
           </div>
         </div>
 
-        <Card>
-          <CardContent className="space-y-3 p-4">
+        <FormPanel title="Acciones de potrero" icon={Sprout} open={formOpen} onClose={() => setFormOpen(false)}>
+          <div className="space-y-3">
             <div className="grid grid-cols-4 gap-2">
               {actionButtons.map((item) => {
                 const Icon = item.icon;
@@ -87,8 +88,8 @@ export function PastureList() {
             {actionPanel === "exit" ? <PastureExitForm /> : null}
             {actionPanel === "event" ? <PastureEventForm /> : null}
             {actionPanel === "new" ? <PastureForm /> : null}
-          </CardContent>
-        </Card>
+          </div>
+        </FormPanel>
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -102,6 +103,7 @@ export function PastureList() {
           />
         ))}
       </section>
+      <FloatingCreateButton label="Acciones de potrero" onClick={() => setFormOpen(true)} />
     </div>
   );
 }

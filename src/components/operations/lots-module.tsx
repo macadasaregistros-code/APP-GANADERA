@@ -2,8 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Layers3, Plus, Scale, TrendingUp, WalletCards } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { FloatingCreateButton, FormPanel } from "@/components/app/form-panel";
 import { FormField } from "@/components/operations/form-field";
 import { MetricCard } from "@/components/operations/metric-card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +18,7 @@ import { formatDate, formatMoney } from "@/features/pastures/format";
 import { usePastureStore } from "@/features/pastures/store";
 
 export function LotsModule() {
+  const [formOpen, setFormOpen] = useState(false);
   const selectedFarmId = usePastureStore((state) => state.selectedFarmId);
   const lots = usePastureStore((state) => state.lots);
   const animals = usePastureStore((state) => state.animals);
@@ -47,6 +50,7 @@ export function LotsModule() {
       targetSaleWeightKg: 450,
       notes: ""
     });
+    setFormOpen(false);
   });
 
   const performances = farmLots.map((lot) => getLotPerformance({ lot, animals, weights, costs }));
@@ -74,11 +78,7 @@ export function LotsModule() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Crear lote</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <FormPanel title="Crear lote" icon={Layers3} open={formOpen} onClose={() => setFormOpen(false)}>
             <form className="grid gap-3" onSubmit={onSubmit}>
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Nombre" error={form.formState.errors.name?.message}>
@@ -104,8 +104,7 @@ export function LotsModule() {
                 {form.formState.isSubmitting ? "Creando..." : "Crear lote"}
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </FormPanel>
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -129,6 +128,7 @@ export function LotsModule() {
           </Card>
         ))}
       </section>
+      <FloatingCreateButton label="Crear lote" onClick={() => setFormOpen(true)} />
     </div>
   );
 }

@@ -2,8 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PackagePlus, Plus, Wheat, WalletCards } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { FloatingCreateButton, FormPanel } from "@/components/app/form-panel";
 import { FormField } from "@/components/operations/form-field";
 import { MetricCard } from "@/components/operations/metric-card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,7 @@ import { formatDate, formatMoney } from "@/features/pastures/format";
 import { usePastureStore } from "@/features/pastures/store";
 
 export function SupplementationModule() {
+  const [formOpen, setFormOpen] = useState(false);
   const selectedFarmId = usePastureStore((state) => state.selectedFarmId);
   const lots = usePastureStore((state) => state.lots);
   const feedItems = usePastureStore((state) => state.feedItems);
@@ -73,6 +76,7 @@ export function SupplementationModule() {
       animalCount: farmLots[0]?.animalCount ?? 1,
       notes: ""
     });
+    setFormOpen(false);
   });
 
   return (
@@ -87,12 +91,10 @@ export function SupplementationModule() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Nuevo suplemento</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <FormPanel title="Registrar suplementacion" icon={Wheat} open={formOpen} onClose={() => setFormOpen(false)}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-md border bg-slate-50 p-3">
+              <h3 className="mb-3 text-sm font-bold text-slate-950">Nuevo suplemento</h3>
               <form className="grid gap-3" onSubmit={onFeedSubmit}>
                 <FormField label="Nombre" error={feedForm.formState.errors.name?.message}>
                   <Input {...feedForm.register("name")} placeholder="Sal mineralizada 8%" />
@@ -117,14 +119,10 @@ export function SupplementationModule() {
                   Crear insumo
                 </Button>
               </form>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Registrar suministro</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <div className="rounded-md border bg-slate-50 p-3">
+              <h3 className="mb-3 text-sm font-bold text-slate-950">Registrar suministro</h3>
               <form className="grid gap-3" onSubmit={onRecordSubmit}>
                 <div className="grid grid-cols-2 gap-3">
                   <FormField label="Lote">
@@ -168,9 +166,9 @@ export function SupplementationModule() {
                   Guardar suministro
                 </Button>
               </form>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </FormPanel>
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -193,6 +191,7 @@ export function SupplementationModule() {
           );
         })}
       </section>
+      <FloatingCreateButton label="Registrar suplementacion" onClick={() => setFormOpen(true)} />
     </div>
   );
 }

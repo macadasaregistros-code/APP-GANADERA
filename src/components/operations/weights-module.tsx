@@ -2,8 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Scale, TrendingDown, TrendingUp } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { FloatingCreateButton, FormPanel } from "@/components/app/form-panel";
 import { FormField } from "@/components/operations/form-field";
 import { MetricCard } from "@/components/operations/metric-card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,7 @@ import { formatDate } from "@/features/pastures/format";
 import { usePastureStore } from "@/features/pastures/store";
 
 export function WeightsModule() {
+  const [formOpen, setFormOpen] = useState(false);
   const selectedFarmId = usePastureStore((state) => state.selectedFarmId);
   const animals = usePastureStore((state) => state.animals);
   const lots = usePastureStore((state) => state.lots);
@@ -55,6 +58,7 @@ export function WeightsModule() {
       weightKg: farmAnimals[0]?.currentWeightKg ?? 300,
       notes: ""
     });
+    setFormOpen(false);
   });
 
   const avgGmd =
@@ -75,11 +79,7 @@ export function WeightsModule() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Registrar pesaje</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <FormPanel title="Registrar pesaje" icon={Scale} open={formOpen} onClose={() => setFormOpen(false)}>
             <form className="grid gap-3" onSubmit={onSubmit}>
               <FormField label="Animal" error={form.formState.errors.animalId?.message}>
                 <Select {...form.register("animalId")}>
@@ -106,8 +106,7 @@ export function WeightsModule() {
                 Guardar pesaje
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </FormPanel>
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -132,6 +131,7 @@ export function WeightsModule() {
           );
         })}
       </section>
+      <FloatingCreateButton label="Registrar pesaje" onClick={() => setFormOpen(true)} />
     </div>
   );
 }
