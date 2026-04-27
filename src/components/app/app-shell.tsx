@@ -29,7 +29,7 @@ const navItems = [
   { href: "/animales", label: "Animales", icon: Beef },
   { href: "/lotes", label: "Lotes", icon: Layers3 },
   { href: "/pesajes", label: "Pesajes", icon: Scale },
-  { href: "/potreros", label: "Potreros", icon: Sprout },
+  { href: "/potreros", label: "Rotacion", icon: Sprout },
   { href: "/sanidad", label: "Sanidad", icon: HeartPulse },
   { href: "/suplementacion", label: "Suplementos", icon: Wheat },
   { href: "/costos", label: "Costos", icon: WalletCards },

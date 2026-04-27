@@ -1,21 +1,21 @@
 "use client";
 
-import { AlertTriangle, CalendarPlus, CheckCircle2, Clock, LogIn, LogOut, Plus, Sprout } from "lucide-react";
+import { AlertTriangle, CalendarPlus, CheckCircle2, Clock, LogIn, Plus, Sprout } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { FloatingCreateButton, FormPanel } from "@/components/app/form-panel";
 import { PastureCard } from "@/components/pastures/pasture-card";
-import { PastureEntryForm, PastureEventForm, PastureExitForm, PastureForm } from "@/components/pastures/pasture-forms";
+import { PastureEntryForm, PastureEventForm, PastureForm } from "@/components/pastures/pasture-forms";
+import { PastureRotationBoard } from "@/components/pastures/pasture-rotation-board";
 import { Button } from "@/components/ui/button";
 import { getPastureStatus } from "@/features/pastures/calculations";
 import { usePastureStore } from "@/features/pastures/store";
 import { cn } from "@/lib/utils";
 
-type ActionPanel = "entry" | "exit" | "event" | "new";
+type ActionPanel = "entry" | "event" | "new";
 
 const actionButtons = [
   { id: "entry", label: "Entrar", icon: LogIn },
-  { id: "exit", label: "Sacar", icon: LogOut },
   { id: "event", label: "Evento", icon: CalendarPlus },
   { id: "new", label: "Nuevo", icon: Plus }
 ] satisfies Array<{ id: ActionPanel; label: string; icon: typeof LogIn }>;
@@ -46,7 +46,7 @@ export function PastureList() {
 
   return (
     <div className="space-y-5">
-      <section className="grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
+      <section className="grid gap-4 md:grid-cols-[0.85fr_1.15fr]">
         <div className="rounded-lg border bg-white p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -63,34 +63,35 @@ export function PastureList() {
           </div>
         </div>
 
-        <FormPanel title="Acciones de potrero" icon={Sprout} open={formOpen} onClose={() => setFormOpen(false)}>
-          <div className="space-y-3">
-            <div className="grid grid-cols-4 gap-2">
-              {actionButtons.map((item) => {
-                const Icon = item.icon;
-                const active = actionPanel === item.id;
-
-                return (
-                  <Button
-                    key={item.id}
-                    type="button"
-                    variant={active ? "default" : "outline"}
-                    className="h-16 flex-col px-2 text-xs"
-                    onClick={() => setActionPanel(item.id)}
-                  >
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                    {item.label}
-                  </Button>
-                );
-              })}
-            </div>
-            {actionPanel === "entry" ? <PastureEntryForm /> : null}
-            {actionPanel === "exit" ? <PastureExitForm /> : null}
-            {actionPanel === "event" ? <PastureEventForm /> : null}
-            {actionPanel === "new" ? <PastureForm /> : null}
-          </div>
-        </FormPanel>
+        <PastureRotationBoard pastures={farmPastures} rotations={rotations} lots={farmLots} />
       </section>
+
+      <FormPanel title="Acciones de rotacion" icon={Sprout} open={formOpen} onClose={() => setFormOpen(false)}>
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-2">
+            {actionButtons.map((item) => {
+              const Icon = item.icon;
+              const active = actionPanel === item.id;
+
+              return (
+                <Button
+                  key={item.id}
+                  type="button"
+                  variant={active ? "default" : "outline"}
+                  className="h-16 flex-col px-2 text-xs"
+                  onClick={() => setActionPanel(item.id)}
+                >
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  {item.label}
+                </Button>
+              );
+            })}
+          </div>
+          {actionPanel === "entry" ? <PastureEntryForm /> : null}
+          {actionPanel === "event" ? <PastureEventForm /> : null}
+          {actionPanel === "new" ? <PastureForm /> : null}
+        </div>
+      </FormPanel>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {farmPastures.map((pasture) => (

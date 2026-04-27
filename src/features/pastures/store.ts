@@ -153,9 +153,9 @@ type PastureStore = {
   setSelectedFarmId: (farmId: string) => void;
   createFarm: (input: CreateFarmInput) => Promise<void>;
   createLot: (input: CreateLotInput) => Promise<void>;
-  createPasture: (input: CreatePastureInput) => void;
+  createPasture: (input: CreatePastureInput) => Promise<void>;
   updatePasture: (pastureId: string, input: Partial<CreatePastureInput>) => void;
-  enterPasture: (input: EnterPastureInput) => void;
+  enterPasture: (input: EnterPastureInput) => Promise<void>;
   exitPasture: (input: ExitPastureInput) => void;
   addPastureEvent: (input: CreateEventInput) => void;
   createAnimal: (input: CreateAnimalInput) => Promise<void>;
@@ -294,6 +294,76 @@ function mapWeight(row: {
   };
 }
 
+function mapPasture(row: {
+  id: string;
+  farm_id: string;
+  name: string;
+  area_ha: number;
+  grass_type: string | null;
+  carrying_capacity_animals: number | null;
+  max_grazing_days: number;
+  recovery_days_required: number;
+  water_available: boolean;
+  status: "active" | "maintenance";
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}): Pasture {
+  return {
+    id: row.id,
+    farmId: row.farm_id,
+    name: row.name,
+    areaHa: Number(row.area_ha),
+    grassType: row.grass_type ?? "",
+    carryingCapacityAnimals: row.carrying_capacity_animals ?? 0,
+    maxGrazingDays: row.max_grazing_days,
+    recoveryDaysRequired: row.recovery_days_required,
+    waterAvailable: row.water_available,
+    status: row.status,
+    notes: row.notes ?? undefined,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function mapRotation(row: {
+  id: string;
+  farm_id: string;
+  pasture_id: string;
+  lot_id: string;
+  entry_date: string;
+  planned_exit_date: string | null;
+  exit_date: string | null;
+  animal_count: number;
+  occupation_days: number | null;
+  max_grazing_days_snapshot: number;
+  recovery_days_required_snapshot: number;
+  pasture_condition_entry: string | null;
+  pasture_condition_exit: string | null;
+  notes: string | null;
+  created_at: string;
+}): PastureRotation {
+  return {
+    id: row.id,
+    farmId: row.farm_id,
+    pastureId: row.pasture_id,
+    lotId: row.lot_id,
+    entryDate: row.entry_date,
+    plannedExitDate: row.planned_exit_date ?? row.entry_date,
+    exitDate: row.exit_date ?? undefined,
+    animalCount: row.animal_count,
+    occupationDays: row.occupation_days ?? undefined,
+    maxGrazingDaysSnapshot: row.max_grazing_days_snapshot,
+    recoveryDaysRequiredSnapshot: row.recovery_days_required_snapshot,
+    pastureConditionEntry: row.pasture_condition_entry ?? undefined,
+    pastureConditionExit: row.pasture_condition_exit ?? undefined,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at
+  };
+}
+
 function withLotCounts(lots: Lot[], animals: Animal[]) {
   return lots.map((lot) => ({
     ...lot,
@@ -326,17 +396,21 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
 
     try {
       const supabase = createSupabaseBrowserClient();
-      const [farmsResult, lotsResult, animalsResult, weightsResult] = await Promise.all([
+      const [farmsResult, lotsResult, animalsResult, weightsResult, pasturesResult, rotationsResult] = await Promise.all([
         supabase.from("farms").select("id,name,department,municipality,productive_area_ha").eq("is_active", true).order("created_at"),
         supabase.from("lots").select("id,farm_id,name,code,entry_date,target_sale_weight_kg,status,notes").order("created_at", { ascending: false }),
         supabase.from("animals").select("*").order("created_at", { ascending: false }),
-        supabase.from("weight_records").select("*").order("weighed_at", { ascending: false })
+        supabase.from("weight_records").select("*").order("weighed_at", { ascending: false }),
+        supabase.from("pastures").select("*").eq("is_active", true).order("created_at"),
+        supabase.from("pasture_rotations").select("*").order("entry_date", { ascending: false })
       ]);
 
       if (farmsResult.error) throw farmsResult.error;
       if (lotsResult.error) throw lotsResult.error;
       if (animalsResult.error) throw animalsResult.error;
       if (weightsResult.error) throw weightsResult.error;
+      if (pasturesResult.error) throw pasturesResult.error;
+      if (rotationsResult.error) throw rotationsResult.error;
 
       const farms = (farmsResult.data ?? []).map(mapFarm);
       const animals = (animalsResult.data ?? []).map(mapAnimal);
@@ -352,6 +426,8 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
         lots,
         animals,
         weights: (weightsResult.data ?? []).map(mapWeight),
+        pastures: (pasturesResult.data ?? []).map(mapPasture),
+        rotations: (rotationsResult.data ?? []).map(mapRotation),
         isLoading: false
       });
     } catch (error) {
@@ -429,18 +505,44 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
       throw error;
     }
   },
-  createPasture: (input) => {
+  createPasture: async (input) => {
     const now = todayIso();
-    const pasture: Pasture = {
-      ...input,
-      id: createId("pasture"),
-      farmId: get().selectedFarmId,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now
-    };
+    const farmId = get().selectedFarmId;
 
-    set((state) => ({ pastures: [pasture, ...state.pastures] }));
+    if (!farmId) {
+      set({ error: "Primero crea o selecciona una finca." });
+      return;
+    }
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("pastures")
+        .insert({
+          farm_id: farmId,
+          name: input.name,
+          area_ha: input.areaHa,
+          grass_type: input.grassType,
+          carrying_capacity_animals: input.carryingCapacityAnimals,
+          max_grazing_days: input.maxGrazingDays,
+          recovery_days_required: input.recoveryDaysRequired,
+          water_available: input.waterAvailable,
+          status: input.status,
+          notes: input.notes || null,
+          is_active: true,
+          created_at: now,
+          updated_at: now
+        })
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      set((state) => ({ pastures: [mapPasture(data), ...state.pastures], error: undefined }));
+    } catch (error) {
+      set({ error: setLocalError(error) });
+      throw error;
+    }
   },
   updatePasture: (pastureId, input) => {
     const now = todayIso();
@@ -449,29 +551,70 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
       pastures: state.pastures.map((pasture) => (pasture.id === pastureId ? { ...pasture, ...input, updatedAt: now } : pasture))
     }));
   },
-  enterPasture: (input) => {
+  enterPasture: async (input) => {
     const pasture = get().pastures.find((item) => item.id === input.pastureId);
 
     if (!pasture) {
       return;
     }
 
-    const rotation: PastureRotation = {
-      id: createId("rotation"),
-      farmId: pasture.farmId,
-      pastureId: pasture.id,
-      lotId: input.lotId,
-      entryDate: input.entryDate,
-      plannedExitDate: addDays(input.entryDate, pasture.maxGrazingDays),
-      animalCount: input.animalCount,
-      maxGrazingDaysSnapshot: pasture.maxGrazingDays,
-      recoveryDaysRequiredSnapshot: pasture.recoveryDaysRequired,
-      pastureConditionEntry: input.pastureConditionEntry,
-      notes: input.notes,
-      createdAt: todayIso()
-    };
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const activeForLot = get().rotations.filter((item) => item.lotId === input.lotId && !item.exitDate);
 
-    set((state) => ({ rotations: [rotation, ...state.rotations] }));
+      await Promise.all(
+        activeForLot.map((rotation) =>
+          supabase
+            .from("pasture_rotations")
+            .update({
+              exit_date: input.entryDate,
+              occupation_days: calculateOccupationDays(rotation.entryDate, input.entryDate),
+              notes: rotation.notes ?? "Salida automatica por cambio de potrero"
+            })
+            .eq("id", rotation.id)
+        )
+      );
+
+      const { data, error } = await supabase
+        .from("pasture_rotations")
+        .insert({
+          farm_id: pasture.farmId,
+          pasture_id: pasture.id,
+          lot_id: input.lotId,
+          entry_date: input.entryDate,
+          planned_exit_date: addDays(input.entryDate, pasture.maxGrazingDays),
+          animal_count: input.animalCount,
+          max_grazing_days_snapshot: pasture.maxGrazingDays,
+          recovery_days_required_snapshot: pasture.recoveryDaysRequired,
+          pasture_condition_entry: input.pastureConditionEntry || null,
+          notes: input.notes || null
+        })
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      const rotation = mapRotation(data);
+      set((state) => ({
+        rotations: [
+          rotation,
+          ...state.rotations.map((item) =>
+            item.lotId === input.lotId && !item.exitDate
+              ? {
+                  ...item,
+                  exitDate: input.entryDate,
+                  occupationDays: calculateOccupationDays(item.entryDate, input.entryDate),
+                  notes: item.notes ?? "Salida automatica por cambio de potrero"
+                }
+              : item
+          )
+        ],
+        error: undefined
+      }));
+    } catch (error) {
+      set({ error: setLocalError(error) });
+      throw error;
+    }
   },
   exitPasture: (input) => {
     set((state) => ({
