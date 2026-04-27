@@ -29,9 +29,21 @@ import { todayIso } from "@/features/pastures/calculations";
 
 type PastureFormProps = {
   pasture?: Pasture;
+  onCompleted?: () => void;
 };
 
-export function PastureForm({ pasture }: PastureFormProps) {
+const grassTypeOptions = [
+  { value: "", label: "Sin especificar" },
+  { value: "Brachiaria", label: "Brachiaria" },
+  { value: "Angleton", label: "Angleton" },
+  { value: "Mombasa", label: "Mombasa" },
+  { value: "Estrella africana", label: "Estrella africana" },
+  { value: "Rastrojo", label: "Rastrojo" },
+  { value: "Kikuyo", label: "Kikuyo" },
+  { value: "Otro", label: "Otro" }
+];
+
+export function PastureForm({ pasture, onCompleted }: PastureFormProps) {
   const createPasture = usePastureStore((state) => state.createPasture);
   const updatePasture = usePastureStore((state) => state.updatePasture);
   const form = useForm<PastureFormValues>({
@@ -43,19 +55,22 @@ export function PastureForm({ pasture }: PastureFormProps) {
     form.reset(getPastureDefaultValues(pasture));
   }, [form, pasture]);
 
-  const onSubmit = form.handleSubmit((values) => {
+  const onSubmit = form.handleSubmit(async (values) => {
     const pastureValues = {
       ...values,
+      grassType: values.grassType ?? "",
       waterAvailable: values.waterAvailable === "true"
     };
 
     if (pasture) {
       updatePasture(pasture.id, pastureValues);
+      onCompleted?.();
       return;
     }
 
-    createPasture(pastureValues);
+    await createPasture(pastureValues);
     form.reset(getPastureDefaultValues());
+    onCompleted?.();
   });
 
   return (
@@ -78,7 +93,13 @@ export function PastureForm({ pasture }: PastureFormProps) {
             </Field>
           </div>
           <Field label="Tipo de pasto" error={form.formState.errors.grassType?.message}>
-            <Input {...form.register("grassType")} placeholder="Brachiaria" />
+            <Select {...form.register("grassType")}>
+              {grassTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Dias pastoreo" error={form.formState.errors.maxGrazingDays?.message}>
@@ -115,7 +136,7 @@ export function PastureForm({ pasture }: PastureFormProps) {
   );
 }
 
-export function PastureEntryForm({ defaultPastureId }: { defaultPastureId?: string }) {
+export function PastureEntryForm({ defaultPastureId, onCompleted }: { defaultPastureId?: string; onCompleted?: () => void }) {
   const selectedFarmId = usePastureStore((state) => state.selectedFarmId);
   const pastures = usePastureStore((state) => state.pastures);
   const rotations = usePastureStore((state) => state.rotations);
@@ -162,8 +183,8 @@ export function PastureEntryForm({ defaultPastureId }: { defaultPastureId?: stri
     });
   }, [availablePastures, defaultPastureId, farmLots, form, selectedFarmId]);
 
-  const onSubmit = form.handleSubmit((values) => {
-    enterPasture(values);
+  const onSubmit = form.handleSubmit(async (values) => {
+    await enterPasture(values);
     form.reset({
       pastureId: availablePastures[0]?.id ?? "",
       lotId: farmLots[0]?.id ?? "",
@@ -172,6 +193,7 @@ export function PastureEntryForm({ defaultPastureId }: { defaultPastureId?: stri
       pastureConditionEntry: "",
       notes: ""
     });
+    onCompleted?.();
   });
 
   return (
@@ -298,7 +320,7 @@ export function PastureExitForm() {
   );
 }
 
-export function PastureEventForm({ defaultPastureId }: { defaultPastureId?: string }) {
+export function PastureEventForm({ defaultPastureId, onCompleted }: { defaultPastureId?: string; onCompleted?: () => void }) {
   const selectedFarmId = usePastureStore((state) => state.selectedFarmId);
   const pastures = usePastureStore((state) => state.pastures);
   const addPastureEvent = usePastureStore((state) => state.addPastureEvent);
@@ -342,6 +364,7 @@ export function PastureEventForm({ defaultPastureId }: { defaultPastureId?: stri
       description: "",
       costAmount: undefined
     });
+    onCompleted?.();
   });
 
   return (

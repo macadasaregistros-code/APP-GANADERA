@@ -46,11 +46,11 @@ export function PastureList() {
 
   return (
     <div className="space-y-5">
-      <section className="grid gap-4 md:grid-cols-[0.85fr_1.15fr]">
+      <section className="grid gap-4 md:grid-cols-[0.5fr_1.5fr]">
         <div className="rounded-lg border bg-white p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">Modulo potreros</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">Modulo rotacion</p>
               <h2 className="mt-1 text-2xl font-bold text-slate-950">{farm?.name ?? "Finca"}</h2>
             </div>
             <Sprout className="h-8 w-8 text-emerald-700" aria-hidden="true" />
@@ -87,9 +87,9 @@ export function PastureList() {
               );
             })}
           </div>
-          {actionPanel === "entry" ? <PastureEntryForm /> : null}
-          {actionPanel === "event" ? <PastureEventForm /> : null}
-          {actionPanel === "new" ? <PastureForm /> : null}
+          {actionPanel === "entry" ? <PastureEntryForm onCompleted={() => setFormOpen(false)} /> : null}
+          {actionPanel === "event" ? <PastureEventForm onCompleted={() => setFormOpen(false)} /> : null}
+          {actionPanel === "new" ? <PastureForm onCompleted={() => setFormOpen(false)} /> : null}
         </div>
       </FormPanel>
 

@@ -36,8 +36,14 @@ const navItems = [
   { href: "/ventas", label: "Ventas", icon: ReceiptText }
 ];
 
-const mobilePrimaryNav = navItems.slice(0, 5);
-const mobileOverflowNav = navItems.slice(5);
+const mobilePrimaryNav = [
+  navItems[4],
+  navItems[1],
+  navItems[2],
+  navItems[3],
+  navItems[0]
+];
+const mobileOverflowNav = navItems.filter((item) => !mobilePrimaryNav.includes(item));
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -47,12 +53,50 @@ export function AppShell({ children }: { children: ReactNode }) {
   const farms = usePastureStore((state) => state.farms);
   const initializeData = usePastureStore((state) => state.initializeData);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     if (!isAuthPage) {
       void initializeData();
     }
   }, [initializeData, isAuthPage]);
+
+  useEffect(() => {
+    if (isAuthPage) {
+      return;
+    }
+
+    let startY = 0;
+    let armed = false;
+
+    const handleTouchStart = (event: TouchEvent) => {
+      startY = event.touches[0]?.clientY ?? 0;
+      armed = window.scrollY <= 0;
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!armed || syncing) {
+        return;
+      }
+
+      const currentY = event.touches[0]?.clientY ?? 0;
+      if (currentY - startY > 90 && window.scrollY <= 0) {
+        armed = false;
+        setSyncing(true);
+        void initializeData().finally(() => {
+          window.setTimeout(() => setSyncing(false), 450);
+        });
+      }
+    };
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+    };
+  }, [initializeData, isAuthPage, syncing]);
 
   if (isAuthPage) {
     return children;
@@ -123,6 +167,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-5 pb-24 md:pb-8">
+        {syncing && (
+          <div className="fixed left-1/2 top-20 z-40 -translate-x-1/2 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white shadow-lg md:hidden">
+            Sincronizando...
+          </div>
+        )}
         {isLoading ? (
           <div className="rounded-lg border bg-white p-4 text-sm text-slate-600 shadow-sm">Cargando datos...</div>
         ) : farms.length === 0 ? (
@@ -146,7 +195,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                    "flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium text-slate-500",
+                  "flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium text-slate-500",
                   active && "bg-emerald-50 text-emerald-800"
                 )}
               >

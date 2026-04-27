@@ -3,7 +3,7 @@ import { z } from "zod";
 export const pastureSchema = z.object({
   name: z.string().min(2, "Nombre requerido"),
   areaHa: z.coerce.number().positive("Area mayor a 0"),
-  grassType: z.string().min(2, "Tipo de pasto requerido"),
+  grassType: z.string().optional(),
   carryingCapacityAnimals: z.coerce.number().int().min(0, "No puede ser negativo"),
   maxGrazingDays: z.coerce.number().int().positive("Dias de pastoreo requeridos"),
   recoveryDaysRequired: z.coerce.number().int().positive("Dias de recuperacion requeridos"),
