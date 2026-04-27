@@ -372,8 +372,7 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
       if (userError) throw userError;
       if (!user) throw new Error("Debes iniciar sesion para crear una finca.");
 
-      const callRpc = supabase.rpc as unknown as (name: "ensure_current_profile") => Promise<{ error: Error | null }>;
-      const { error: profileError } = await callRpc("ensure_current_profile");
+      const { error: profileError } = await supabase.rpc("ensure_current_profile");
       if (profileError) throw profileError;
 
       const { data, error } = await supabase
