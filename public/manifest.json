@@ -1,0 +1,18 @@
+{
+  "name": "APP Ganadera Ceba",
+  "short_name": "Ganadera",
+  "description": "Gestion de ceba bovina enfocada en potreros, GMD y rentabilidad.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#14532d",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
