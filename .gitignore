@@ -32,3 +32,5 @@ dev-server*.log
 .branches
 .temp
 .env.local
+
+.vercel

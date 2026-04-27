@@ -3,30 +3,15 @@
 import { create } from "zustand";
 
 import { addDays, calculateOccupationDays, daysBetween, todayIso } from "@/features/pastures/calculations";
-import {
-  demoAnimals,
-  demoCostRecords,
-  demoEvents,
-  demoFarms,
-  demoFeedItems,
-  demoHealthEvents,
-  demoLots,
-  demoPastures,
-  demoRotations,
-  demoSaleItems,
-  demoSales,
-  demoSupplementationRecords,
-  demoWeightRecords
-} from "@/features/pastures/mock-data";
 import type {
   Animal,
   CostCategory,
   CostRecord,
+  Farm,
   FeedItem,
   FeedType,
   HealthEvent,
   HealthEventType,
-  Farm,
   Lot,
   Pasture,
   PastureEvent,
@@ -37,6 +22,14 @@ import type {
   SupplementationRecord,
   WeightRecord
 } from "@/features/pastures/types";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
+type CreateFarmInput = {
+  name: string;
+  department?: string;
+  municipality?: string;
+  productiveAreaHa?: number;
+};
 
 type CreatePastureInput = Omit<Pasture, "id" | "farmId" | "isActive" | "createdAt" | "updatedAt">;
 
@@ -140,6 +133,8 @@ type CreateSaleInput = {
 };
 
 type PastureStore = {
+  isLoading: boolean;
+  error?: string;
   farms: Farm[];
   selectedFarmId: string;
   lots: Lot[];
@@ -154,14 +149,16 @@ type PastureStore = {
   pastures: Pasture[];
   rotations: PastureRotation[];
   events: PastureEvent[];
+  initializeData: () => Promise<void>;
   setSelectedFarmId: (farmId: string) => void;
-  createLot: (input: CreateLotInput) => void;
+  createFarm: (input: CreateFarmInput) => Promise<void>;
+  createLot: (input: CreateLotInput) => Promise<void>;
   createPasture: (input: CreatePastureInput) => void;
   updatePasture: (pastureId: string, input: Partial<CreatePastureInput>) => void;
   enterPasture: (input: EnterPastureInput) => void;
   exitPasture: (input: ExitPastureInput) => void;
   addPastureEvent: (input: CreateEventInput) => void;
-  createAnimal: (input: CreateAnimalInput) => void;
+  createAnimal: (input: CreateAnimalInput) => Promise<void>;
   recordWeight: (input: CreateWeightInput) => void;
   recordHealthEvent: (input: CreateHealthEventInput) => void;
   createFeedItem: (input: CreateFeedItemInput) => void;
@@ -178,36 +175,260 @@ function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export const usePastureStore = create<PastureStore>((set, get) => ({
-  farms: demoFarms,
-  selectedFarmId: demoFarms[0]?.id ?? "",
-  lots: demoLots,
-  animals: demoAnimals,
-  weights: demoWeightRecords,
-  healthEvents: demoHealthEvents,
-  feedItems: demoFeedItems,
-  supplementationRecords: demoSupplementationRecords,
-  costRecords: demoCostRecords,
-  sales: demoSales,
-  saleItems: demoSaleItems,
-  pastures: demoPastures,
-  rotations: demoRotations,
-  events: demoEvents,
-  setSelectedFarmId: (farmId) => set({ selectedFarmId: farmId }),
-  createLot: (input) => {
-    const lot: Lot = {
-      id: createId("lot"),
-      farmId: get().selectedFarmId,
-      name: input.name,
-      code: input.code,
-      entryDate: input.entryDate,
-      targetSaleWeightKg: input.targetSaleWeightKg,
-      animalCount: 0,
-      status: "active",
-      notes: input.notes
-    };
+function mapFarm(row: {
+  id: string;
+  name: string;
+  department: string | null;
+  municipality: string | null;
+  productive_area_ha: number | null;
+}): Farm {
+  return {
+    id: row.id,
+    name: row.name,
+    department: row.department ?? undefined,
+    municipality: row.municipality ?? undefined,
+    productiveAreaHa: Number(row.productive_area_ha ?? 0)
+  };
+}
 
-    set((state) => ({ lots: [lot, ...state.lots] }));
+function mapLot(row: {
+  id: string;
+  farm_id: string;
+  name: string;
+  code: string | null;
+  entry_date: string | null;
+  target_sale_weight_kg: number | null;
+  status: string;
+  notes: string | null;
+}): Lot {
+  return {
+    id: row.id,
+    farmId: row.farm_id,
+    name: row.name,
+    code: row.code ?? "",
+    animalCount: 0,
+    entryDate: row.entry_date ?? undefined,
+    targetSaleWeightKg: Number(row.target_sale_weight_kg ?? 450),
+    status: row.status === "sold" || row.status === "closed" ? row.status : "active",
+    notes: row.notes ?? undefined
+  };
+}
+
+function mapAnimal(row: {
+  id: string;
+  farm_id: string;
+  lot_id: string;
+  internal_code: string;
+  ear_tag: string;
+  source_text: string;
+  supplier_text: string | null;
+  breed_type: string;
+  sex: "macho" | "hembra";
+  approx_age_months: number | null;
+  entry_weight_kg: number;
+  current_weight_kg: number;
+  purchase_date: string;
+  purchase_price: number;
+  purchase_price_per_kg: number | null;
+  body_condition_score: number | null;
+  health_observations: string | null;
+  photo_url: string | null;
+  status: Animal["status"];
+  created_at: string;
+  updated_at: string;
+}): Animal {
+  return {
+    id: row.id,
+    farmId: row.farm_id,
+    lotId: row.lot_id,
+    internalCode: row.internal_code,
+    earTag: row.ear_tag,
+    sourceText: row.source_text,
+    supplierText: row.supplier_text ?? "",
+    breedType: row.breed_type,
+    sex: row.sex,
+    approxAgeMonths: Number(row.approx_age_months ?? 0),
+    entryWeightKg: Number(row.entry_weight_kg),
+    currentWeightKg: Number(row.current_weight_kg),
+    purchaseDate: row.purchase_date,
+    purchasePrice: Number(row.purchase_price),
+    purchasePricePerKg: Number(row.purchase_price_per_kg ?? row.purchase_price / Math.max(row.entry_weight_kg, 1)),
+    bodyConditionScore: Number(row.body_condition_score ?? 0),
+    healthObservations: row.health_observations ?? undefined,
+    photoUrl: row.photo_url ?? undefined,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function mapWeight(row: {
+  id: string;
+  farm_id: string;
+  lot_id: string;
+  animal_id: string;
+  weighed_at: string;
+  weight_kg: number;
+  previous_weight_kg: number | null;
+  daily_gain_kg: number | null;
+  days_since_last_weight: number | null;
+  days_in_ceba: number;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+}): WeightRecord {
+  return {
+    id: row.id,
+    farmId: row.farm_id,
+    lotId: row.lot_id,
+    animalId: row.animal_id,
+    weighedAt: row.weighed_at,
+    weightKg: Number(row.weight_kg),
+    previousWeightKg: row.previous_weight_kg === null ? undefined : Number(row.previous_weight_kg),
+    dailyGainKg: row.daily_gain_kg === null ? undefined : Number(row.daily_gain_kg),
+    daysSinceLastWeight: row.days_since_last_weight ?? undefined,
+    daysInCeba: row.days_in_ceba,
+    notes: row.notes ?? undefined,
+    createdBy: row.created_by ?? undefined,
+    createdAt: row.created_at
+  };
+}
+
+function withLotCounts(lots: Lot[], animals: Animal[]) {
+  return lots.map((lot) => ({
+    ...lot,
+    animalCount: animals.filter((animal) => animal.lotId === lot.id && animal.status !== "sold" && animal.status !== "dead").length
+  }));
+}
+
+function setLocalError(error: unknown) {
+  return error instanceof Error ? error.message : "No se pudo completar la operacion.";
+}
+
+export const usePastureStore = create<PastureStore>((set, get) => ({
+  isLoading: true,
+  farms: [],
+  selectedFarmId: "",
+  lots: [],
+  animals: [],
+  weights: [],
+  healthEvents: [],
+  feedItems: [],
+  supplementationRecords: [],
+  costRecords: [],
+  sales: [],
+  saleItems: [],
+  pastures: [],
+  rotations: [],
+  events: [],
+  initializeData: async () => {
+    set({ isLoading: true, error: undefined });
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const [farmsResult, lotsResult, animalsResult, weightsResult] = await Promise.all([
+        supabase.from("farms").select("id,name,department,municipality,productive_area_ha").eq("is_active", true).order("created_at"),
+        supabase.from("lots").select("id,farm_id,name,code,entry_date,target_sale_weight_kg,status,notes").order("created_at", { ascending: false }),
+        supabase.from("animals").select("*").order("created_at", { ascending: false }),
+        supabase.from("weight_records").select("*").order("weighed_at", { ascending: false })
+      ]);
+
+      if (farmsResult.error) throw farmsResult.error;
+      if (lotsResult.error) throw lotsResult.error;
+      if (animalsResult.error) throw animalsResult.error;
+      if (weightsResult.error) throw weightsResult.error;
+
+      const farms = (farmsResult.data ?? []).map(mapFarm);
+      const animals = (animalsResult.data ?? []).map(mapAnimal);
+      const lots = withLotCounts((lotsResult.data ?? []).map(mapLot), animals);
+      const selectedFarmId =
+        get().selectedFarmId && farms.some((farm) => farm.id === get().selectedFarmId)
+          ? get().selectedFarmId
+          : farms[0]?.id ?? "";
+
+      set({
+        farms,
+        selectedFarmId,
+        lots,
+        animals,
+        weights: (weightsResult.data ?? []).map(mapWeight),
+        isLoading: false
+      });
+    } catch (error) {
+      set({ error: setLocalError(error), isLoading: false });
+    }
+  },
+  setSelectedFarmId: (farmId) => set({ selectedFarmId: farmId }),
+  createFarm: async (input) => {
+    set({ error: undefined });
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { user },
+        error: userError
+      } = await supabase.auth.getUser();
+
+      if (userError) throw userError;
+      if (!user) throw new Error("Debes iniciar sesion para crear una finca.");
+
+      const callRpc = supabase.rpc as unknown as (name: "ensure_current_profile") => Promise<{ error: Error | null }>;
+      const { error: profileError } = await callRpc("ensure_current_profile");
+      if (profileError) throw profileError;
+
+      const { data, error } = await supabase
+        .from("farms")
+        .insert({
+          owner_id: user.id,
+          name: input.name,
+          department: input.department || null,
+          municipality: input.municipality || null,
+          productive_area_ha: input.productiveAreaHa ?? null
+        })
+        .select("id,name,department,municipality,productive_area_ha")
+        .single();
+
+      if (error) throw error;
+
+      const farm = mapFarm(data);
+      set((state) => ({
+        farms: [farm, ...state.farms],
+        selectedFarmId: farm.id
+      }));
+    } catch (error) {
+      set({ error: setLocalError(error) });
+      throw error;
+    }
+  },
+  createLot: async (input) => {
+    const farmId = get().selectedFarmId;
+    if (!farmId) {
+      set({ error: "Primero crea o selecciona una finca." });
+      return;
+    }
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("lots")
+        .insert({
+          farm_id: farmId,
+          name: input.name,
+          code: input.code,
+          entry_date: input.entryDate || null,
+          target_sale_weight_kg: input.targetSaleWeightKg,
+          notes: input.notes || null
+        })
+        .select("id,farm_id,name,code,entry_date,target_sale_weight_kg,status,notes")
+        .single();
+
+      if (error) throw error;
+
+      set((state) => ({ lots: [mapLot(data), ...state.lots], error: undefined }));
+    } catch (error) {
+      set({ error: setLocalError(error) });
+      throw error;
+    }
   },
   createPasture: (input) => {
     const now = todayIso();
@@ -226,15 +447,7 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
     const now = todayIso();
 
     set((state) => ({
-      pastures: state.pastures.map((pasture) =>
-        pasture.id === pastureId
-          ? {
-              ...pasture,
-              ...input,
-              updatedAt: now
-            }
-          : pasture
-      )
+      pastures: state.pastures.map((pasture) => (pasture.id === pastureId ? { ...pasture, ...input, updatedAt: now } : pasture))
     }));
   },
   enterPasture: (input) => {
@@ -292,50 +505,72 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
       title: input.title,
       description: input.description,
       costAmount: input.costAmount,
-      createdBy: "demo-user",
       createdAt: todayIso()
     };
 
     set((state) => ({ events: [event, ...state.events] }));
   },
-  createAnimal: (input) => {
-    const now = todayIso();
-    const animal: Animal = {
-      ...input,
-      id: createId("animal"),
-      farmId: get().selectedFarmId,
-      currentWeightKg: input.entryWeightKg,
-      purchasePricePerKg: input.purchasePrice / Math.max(input.entryWeightKg, 1),
-      status: "active",
-      createdAt: now,
-      updatedAt: now
-    };
+  createAnimal: async (input) => {
+    const farmId = get().selectedFarmId;
+    if (!farmId) {
+      set({ error: "Primero crea o selecciona una finca." });
+      return;
+    }
 
-    const weight: WeightRecord = {
-      id: createId("weight"),
-      farmId: animal.farmId,
-      lotId: animal.lotId,
-      animalId: animal.id,
-      weighedAt: animal.purchaseDate,
-      weightKg: animal.entryWeightKg,
-      daysInCeba: 0,
-      notes: "Peso de entrada",
-      createdBy: "demo-user",
-      createdAt: now
-    };
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: animalRow, error: animalError } = await supabase
+        .from("animals")
+        .insert({
+          farm_id: farmId,
+          lot_id: input.lotId,
+          internal_code: input.internalCode,
+          ear_tag: input.earTag,
+          source_text: input.sourceText,
+          supplier_text: input.supplierText || null,
+          breed_type: input.breedType,
+          sex: input.sex,
+          approx_age_months: input.approxAgeMonths,
+          entry_weight_kg: input.entryWeightKg,
+          current_weight_kg: input.entryWeightKg,
+          purchase_date: input.purchaseDate,
+          purchase_price: input.purchasePrice,
+          body_condition_score: input.bodyConditionScore,
+          health_observations: input.healthObservations || null
+        })
+        .select("*")
+        .single();
 
-    set((state) => ({
-      animals: [animal, ...state.animals],
-      weights: [weight, ...state.weights],
-      lots: state.lots.map((lot) =>
-        lot.id === animal.lotId
-          ? {
-              ...lot,
-              animalCount: lot.animalCount + 1
-            }
-          : lot
-      )
-    }));
+      if (animalError) throw animalError;
+
+      const { data: weightRow, error: weightError } = await supabase
+        .from("weight_records")
+        .insert({
+          farm_id: farmId,
+          lot_id: input.lotId,
+          animal_id: animalRow.id,
+          weighed_at: input.purchaseDate,
+          weight_kg: input.entryWeightKg,
+          days_in_ceba: 0,
+          notes: "Peso de entrada"
+        })
+        .select("*")
+        .single();
+
+      if (weightError) throw weightError;
+
+      const animal = mapAnimal(animalRow);
+      const weight = mapWeight(weightRow);
+      set((state) => ({
+        animals: [animal, ...state.animals],
+        weights: [weight, ...state.weights],
+        lots: withLotCounts(state.lots, [animal, ...state.animals]),
+        error: undefined
+      }));
+    } catch (error) {
+      set({ error: setLocalError(error) });
+      throw error;
+    }
   },
   recordWeight: (input) => {
     const animal = get().animals.find((item) => item.id === input.animalId);
@@ -353,8 +588,6 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
     const daysSinceLastWeight = Math.max(daysBetween(previousDate, input.weighedAt), 1);
     const daysInCeba = Math.max(daysBetween(animal.purchaseDate, input.weighedAt), 1);
     const dailyGainKg = (input.weightKg - previousWeightKg) / daysSinceLastWeight;
-    const nextStatus =
-      input.weightKg >= 450 ? "ready_for_sale" : dailyGainKg < 0.55 ? "underperforming" : animal.status === "sick" ? "sick" : "active";
 
     const weight: WeightRecord = {
       id: createId("weight"),
@@ -368,23 +601,10 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
       daysSinceLastWeight,
       daysInCeba,
       notes: input.notes,
-      createdBy: "demo-user",
       createdAt: todayIso()
     };
 
-    set((state) => ({
-      weights: [weight, ...state.weights],
-      animals: state.animals.map((item) =>
-        item.id === animal.id
-          ? {
-              ...item,
-              currentWeightKg: input.weightKg,
-              status: nextStatus,
-              updatedAt: todayIso()
-            }
-          : item
-      )
-    }));
+    set((state) => ({ weights: [weight, ...state.weights] }));
   },
   recordHealthEvent: (input) => {
     const lot = input.lotId ? get().lots.find((item) => item.id === input.lotId) : undefined;
@@ -394,19 +614,10 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
       id: createId("health"),
       farmId,
       ...input,
-      createdBy: "demo-user",
       createdAt: todayIso()
     };
 
-    set((state) => ({
-      healthEvents: [event, ...state.healthEvents],
-      animals:
-        input.eventType === "mortalidad" && input.animalId
-          ? state.animals.map((item) => (item.id === input.animalId ? { ...item, status: "dead" } : item))
-          : input.eventType === "enfermedad" && input.animalId
-            ? state.animals.map((item) => (item.id === input.animalId ? { ...item, status: "sick" } : item))
-            : state.animals
-    }));
+    set((state) => ({ healthEvents: [event, ...state.healthEvents] }));
   },
   createFeedItem: (input) => {
     const feedItem: FeedItem = {
@@ -435,7 +646,6 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
       id: createId("cost"),
       farmId: get().selectedFarmId,
       ...input,
-      createdBy: "demo-user",
       createdAt: todayIso()
     };
 
@@ -451,29 +661,22 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
     const saleId = createId("sale");
     const totalWeightKg = selectedAnimals.reduce((sum, animal) => sum + animal.currentWeightKg, 0);
     const grossAmount = totalWeightKg * input.pricePerKg;
-    const extraCostPerAnimal = input.extraCosts / selectedAnimals.length;
-    const saleItems: SaleItem[] = selectedAnimals.map((animal) => {
-      const gross = animal.currentWeightKg * input.pricePerKg;
-      const allocatedCost = extraCostPerAnimal;
-      const netProfit = gross - animal.purchasePrice - allocatedCost;
-
-      return {
-        id: createId("sale-item"),
-        farmId: animal.farmId,
-        saleId,
-        animalId: animal.id,
-        lotId: animal.lotId,
-        exitWeightKg: animal.currentWeightKg,
-        pricePerKg: input.pricePerKg,
-        grossAmount: gross,
-        purchaseCost: animal.purchasePrice,
-        allocatedCost,
-        grossProfit: gross - animal.purchasePrice,
-        netProfit,
-        roi: netProfit / Math.max(animal.purchasePrice + allocatedCost, 1),
-        daysInCeba: Math.max(daysBetween(animal.purchaseDate, input.saleDate), 1)
-      };
-    });
+    const saleItems: SaleItem[] = selectedAnimals.map((animal) => ({
+      id: createId("sale-item"),
+      farmId: animal.farmId,
+      saleId,
+      animalId: animal.id,
+      lotId: animal.lotId,
+      exitWeightKg: animal.currentWeightKg,
+      pricePerKg: input.pricePerKg,
+      grossAmount: animal.currentWeightKg * input.pricePerKg,
+      purchaseCost: animal.purchasePrice,
+      allocatedCost: input.extraCosts / Math.max(selectedAnimals.length, 1),
+      grossProfit: animal.currentWeightKg * input.pricePerKg - animal.purchasePrice,
+      netProfit: animal.currentWeightKg * input.pricePerKg - animal.purchasePrice - input.extraCosts / Math.max(selectedAnimals.length, 1),
+      roi: 0,
+      daysInCeba: Math.max(daysBetween(animal.purchaseDate, input.saleDate), 1)
+    }));
     const sale: Sale = {
       id: saleId,
       farmId: selectedAnimals[0].farmId,
@@ -492,14 +695,7 @@ export const usePastureStore = create<PastureStore>((set, get) => ({
     set((state) => ({
       sales: [sale, ...state.sales],
       saleItems: [...saleItems, ...state.saleItems],
-      animals: state.animals.map((animal) =>
-        input.animalIds.includes(animal.id)
-          ? {
-              ...animal,
-              status: "sold"
-            }
-          : animal
-      )
+      animals: state.animals.map((animal) => (input.animalIds.includes(animal.id) ? { ...animal, status: "sold" } : animal))
     }));
   }
 }));

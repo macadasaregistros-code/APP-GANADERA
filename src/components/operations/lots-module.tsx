@@ -38,8 +38,8 @@ export function LotsModule() {
     }
   });
 
-  const onSubmit = form.handleSubmit((values) => {
-    createLot(values);
+  const onSubmit = form.handleSubmit(async (values) => {
+    await createLot(values);
     form.reset({
       name: "",
       code: "",
@@ -99,9 +99,9 @@ export function LotsModule() {
               <FormField label="Notas">
                 <Textarea {...form.register("notes")} />
               </FormField>
-              <Button type="submit">
+              <Button type="submit" disabled={form.formState.isSubmitting}>
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                Crear lote
+                {form.formState.isSubmitting ? "Creando..." : "Crear lote"}
               </Button>
             </form>
           </CardContent>

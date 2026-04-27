@@ -58,8 +58,8 @@ export function AnimalsModule() {
     }
   });
 
-  const onSubmit = form.handleSubmit((values) => {
-    createAnimal({
+  const onSubmit = form.handleSubmit(async (values) => {
+    await createAnimal({
       ...values,
       supplierText: values.supplierText ?? "",
       healthObservations: values.healthObservations ?? ""
@@ -161,9 +161,9 @@ export function AnimalsModule() {
               <FormField label="Observaciones sanitarias">
                 <Textarea {...form.register("healthObservations")} />
               </FormField>
-              <Button type="submit" disabled={farmLots.length === 0}>
+              <Button type="submit" disabled={farmLots.length === 0 || form.formState.isSubmitting}>
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                Guardar animal
+                {form.formState.isSubmitting ? "Guardando..." : "Guardar animal"}
               </Button>
             </form>
           </CardContent>

@@ -3,6 +3,7 @@
 import {
   BarChart3,
   Beef,
+  Building2,
   HeartPulse,
   Layers3,
   ReceiptText,
@@ -13,9 +14,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { FarmSwitcher } from "@/components/app/farm-switcher";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { usePastureStore } from "@/features/pastures/store";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -32,6 +37,21 @@ const navItems = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const isAuthPage = pathname.startsWith("/login");
+  const isLoading = usePastureStore((state) => state.isLoading);
+  const error = usePastureStore((state) => state.error);
+  const farms = usePastureStore((state) => state.farms);
+  const initializeData = usePastureStore((state) => state.initializeData);
+
+  useEffect(() => {
+    if (!isAuthPage) {
+      void initializeData();
+    }
+  }, [initializeData, isAuthPage]);
+
+  if (isAuthPage) {
+    return children;
+  }
 
   return (
     <div className="min-h-screen">
@@ -67,7 +87,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-5 pb-24 md:pb-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-5 pb-24 md:pb-8">
+        {isLoading ? (
+          <div className="rounded-lg border bg-white p-4 text-sm text-slate-600 shadow-sm">Cargando datos...</div>
+        ) : farms.length === 0 ? (
+          <FarmSetup />
+        ) : (
+          <>
+            {error && <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div>}
+            {children}
+          </>
+        )}
+      </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t bg-white/96 shadow-soft backdrop-blur md:hidden">
         <div className="safe-bottom flex gap-1 overflow-x-auto px-2 pt-2">
@@ -91,6 +122,64 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </div>
       </nav>
+    </div>
+  );
+}
+
+function FarmSetup() {
+  const createFarm = usePastureStore((state) => state.createFarm);
+  const error = usePastureStore((state) => state.error);
+  const [name, setName] = useState("");
+  const [department, setDepartment] = useState("");
+  const [municipality, setMunicipality] = useState("");
+  const [productiveAreaHa, setProductiveAreaHa] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    try {
+      await createFarm({
+        name,
+        department,
+        municipality,
+        productiveAreaHa: productiveAreaHa ? Number(productiveAreaHa) : undefined
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-xl">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 text-emerald-700">
+            <Building2 className="h-5 w-5" aria-hidden="true" />
+            <p className="text-sm font-semibold uppercase tracking-wide">Configuracion inicial</p>
+          </div>
+          <CardTitle>Crear finca</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="grid gap-3" onSubmit={handleSubmit}>
+            <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nombre de la finca" required />
+            <div className="grid grid-cols-2 gap-3">
+              <Input value={department} onChange={(event) => setDepartment(event.target.value)} placeholder="Departamento" />
+              <Input value={municipality} onChange={(event) => setMunicipality(event.target.value)} placeholder="Municipio" />
+            </div>
+            <Input
+              type="number"
+              value={productiveAreaHa}
+              onChange={(event) => setProductiveAreaHa(event.target.value)}
+              placeholder="Area productiva ha"
+            />
+            {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
+            <Button type="submit" disabled={loading}>
+              {loading ? "Creando..." : "Crear finca"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
