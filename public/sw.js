@@ -1,5 +1,5 @@
-const CACHE_NAME = "app-ganadera-v1";
-const CORE_ASSETS = ["/", "/potreros", "/manifest.json", "/icon.svg"];
+const CACHE_NAME = "app-ganadera-v2";
+const CORE_ASSETS = ["/manifest.json", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS)));
@@ -20,19 +20,27 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
+  const requestUrl = new URL(event.request.url);
 
-      return fetch(event.request)
-        .then((response) => {
+  if (event.request.mode === "navigate") {
+    event.respondWith(fetch(event.request).catch(() => caches.match("/")));
+    return;
+  }
+
+  if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        if (CORE_ASSETS.includes(requestUrl.pathname)) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          return response;
-        })
-        .catch(() => caches.match("/potreros"));
-    })
+        }
+
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
