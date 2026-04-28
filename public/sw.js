@@ -1,5 +1,5 @@
-const CACHE_NAME = "app-ganadera-v2";
-const CORE_ASSETS = ["/manifest.json", "/icon.svg"];
+const CACHE_NAME = "app-ganadera-v3";
+const CORE_ASSETS = ["/manifest.json", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png", "/favicon.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS)));
