@@ -73,9 +73,9 @@ export function CostsModule() {
   });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 rounded-2xl border border-white/70 bg-white/30 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.12)] backdrop-blur-md">
       <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
+        <div className="rounded-lg border border-white/70 bg-white/45 p-4 shadow-sm backdrop-blur-md">
           <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">Costos</p>
           <h2 className="mt-1 text-2xl font-bold text-slate-950">Centro financiero operativo</h2>
           <div className="mt-4 grid grid-cols-2 gap-2">
@@ -149,7 +149,7 @@ export function CostsModule() {
         {allCosts
           .sort((a, b) => b.costDate.localeCompare(a.costDate))
           .map((cost) => (
-            <Card key={cost.id}>
+            <Card key={cost.id} className="border-white/70 bg-white/45 shadow-[0_12px_30px_rgba(15,23,42,0.09)] backdrop-blur-md">
               <CardHeader>
                 <CardTitle>{cost.description}</CardTitle>
                 <p className="text-sm text-slate-500">{formatDate(cost.costDate)} · {costCategoryLabels[cost.category]}</p>

@@ -37,13 +37,18 @@ const navItems = [
 ];
 
 const mobilePrimaryNav = [
-  navItems[4],
-  navItems[1],
-  navItems[2],
-  navItems[3],
-  navItems[0]
+  { href: "/potreros", label: "Rotacion", icon: Sprout },
+  { href: "/ganado", label: "Ganado", icon: Beef },
+  { href: "/costos", label: "Costos", icon: WalletCards },
+  { href: "/gestion", label: "Gestion", icon: Layers3 },
+  { href: "/dashboard", label: "Dashboard", icon: BarChart3 }
 ];
-const mobileOverflowNav = navItems.filter((item) => !mobilePrimaryNav.includes(item));
+const mobileOverflowNav = [
+  { href: "/suplementacion", label: "Suplementos", icon: Wheat },
+  { href: "/sanidad", label: "Sanidad", icon: HeartPulse },
+  { href: "/pesajes", label: "Pesajes", icon: Scale },
+  { href: "/ventas", label: "Ventas", icon: ReceiptText }
+];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -105,17 +110,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b bg-white/92 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto grid max-w-6xl grid-cols-[2.5rem_1fr_minmax(8.5rem,38vw)] items-center gap-2 px-3 py-2 md:flex md:justify-between md:gap-3 md:px-4 md:py-3">
+          <Button type="button" variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen((value) => !value)}>
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </Button>
           <Link href="/potreros" className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Ceba bovina</p>
-            <h1 className="truncate text-lg font-bold text-slate-950">APP Ganadera</h1>
+            <h1 className="truncate text-base font-bold text-slate-950 md:text-lg">APP Ganadera</h1>
           </Link>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen((value) => !value)}>
-              <Menu className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            <FarmSwitcher />
-          </div>
+          <FarmSwitcher />
         </div>
         {mobileMenuOpen && (
           <div className="border-t bg-white px-4 py-2 md:hidden">

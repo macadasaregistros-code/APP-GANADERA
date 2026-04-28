@@ -47,7 +47,7 @@ export function PastureList() {
   return (
     <div className="space-y-5">
       <section className="grid gap-4 md:grid-cols-[0.5fr_1.5fr]">
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
+        <div className="rounded-xl border-2 border-emerald-100 bg-white p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">Modulo rotacion</p>

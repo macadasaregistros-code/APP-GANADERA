@@ -67,9 +67,12 @@ export function PastureRotationBoard({ pastures, rotations, lots }: RotationBoar
 
   return (
     <>
-      <Card>
+      <Card className="border-2 border-emerald-100 bg-white shadow-sm">
         <CardHeader>
-          <CardTitle>Mapa de rotacion</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            Mapa de rotacion
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex min-h-72 flex-wrap content-start gap-2">

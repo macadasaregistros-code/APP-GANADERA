@@ -59,10 +59,10 @@ export function OperationsDashboard() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border bg-white p-4 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">Dashboard gerencial</p>
-        <h2 className="mt-1 text-2xl font-bold text-slate-950">{farm?.name ?? "Finca"}</h2>
-        <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+      <section className="rounded-lg border border-slate-800 bg-zinc-950 p-4 shadow-sm">
+        <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">Dashboard gerencial</p>
+        <h2 className="mt-1 text-2xl font-bold text-zinc-50">{farm?.name ?? "Finca"}</h2>
+        <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4 [&>div]:border-zinc-700 [&>div]:bg-zinc-900 [&>div]:text-zinc-100 [&_p]:text-zinc-50">
           <MetricCard icon={TrendingUp} label="GMD prom." value={`${avgGmd.toFixed(2)} kg/d`} color="text-emerald-700" />
           <MetricCard
             icon={CircleDollarSign}
@@ -80,13 +80,13 @@ export function OperationsDashboard() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <Card>
+        <Card className="border-slate-300 bg-zinc-50 shadow-sm">
           <CardHeader>
-            <CardTitle>Eficiencia por lote</CardTitle>
+            <CardTitle className="font-mono text-sm uppercase tracking-wide">Eficiencia por lote</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {lotPerformances.map((performance) => (
-              <div key={performance.lot.id} className="rounded-md border bg-slate-50 p-3">
+              <div key={performance.lot.id} className="rounded-md border-l-4 border-l-emerald-700 bg-white p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-slate-950">{performance.lot.name}</p>
@@ -104,9 +104,9 @@ export function OperationsDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-slate-300 bg-zinc-50 shadow-sm">
           <CardHeader>
-            <CardTitle>Acciones rapidas</CardTitle>
+            <CardTitle className="font-mono text-sm uppercase tracking-wide">Acciones rapidas</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-2">
             <Button asChild variant="outline">

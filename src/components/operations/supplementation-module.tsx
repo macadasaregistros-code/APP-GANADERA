@@ -61,6 +61,7 @@ export function SupplementationModule() {
   const onFeedSubmit = feedForm.handleSubmit((values) => {
     createFeedItem(values);
     feedForm.reset({ name: "", feedType: "sal_mineralizada", unit: "kg", defaultCostPerUnit: 0 });
+    setFormOpen(false);
   });
 
   const onRecordSubmit = recordForm.handleSubmit((values) => {
